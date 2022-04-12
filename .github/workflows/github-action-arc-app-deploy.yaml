@@ -1,6 +1,6 @@
-# This workflow will build and push an application to a Azure Kubernetes Service (AKS) cluster when you push your code
+# This workflow will build and push an application to a Azure Arc-enabled Kubernetes (Connected Cluster) Service cluster when you push your code
 #
-# This workflow assumes you have already created the target AKS cluster and have created an Azure Container Registry (ACR)
+# This workflow assumes you have already created the target Connected cluster and have created an Azure Container Registry (ACR)
 # For instructions see:
 #   - https://docs.microsoft.com/en-us/azure/aks/kubernetes-walkthrough-portal
 #   - https://docs.microsoft.com/en-us/azure/container-registry/container-registry-get-started-portal
@@ -9,15 +9,13 @@
 # To configure this workflow:
 #
 # 1. Set the following secrets in your repository (instructions for getting these
-#    https://github.com/Azure/login#configure-a-service-principal-with-a-federated-credential-to-use-oidc-based-authentication):
-#    - AZURE_CLIENT_ID
-#    - AZURE_TENANT_ID
-#    - AZURE_SUBSCRIPTION_ID
+#    - AZURE_CREDENTIALS
+#    -
 #
 # 2. Set the following environment variables (or replace the values below):
 #    - AZURE_CONTAINER_REGISTRY (name of your container registry / ACR)
-#    - RESOURCE_GROUP (where your cluster is deployed)
-#    - CLUSTER_NAME (name of your AKS cluster)
+#    - RESOURCE_GROUP (where your Arc-enabled cluster is deployed)
+#    - CLUSTER_NAME (name of your Arc-enabled cluster)
 #    - CONTAINER_NAME (name of the container image you would like to push up to your ACR)
 #    - SECRET_NAME (name of the secret associated with pulling your ACR image)
 #    - DEPLOYMENT_MANIFEST_PATH (path to the manifest yaml for your deployment)
@@ -26,16 +24,16 @@
 # For more samples to get started with GitHub Action workflows to deploy to Azure, refer to https://github.com/Azure/actions-workflow-samples
 # For more options with the actions used below please refer to https://github.com/Azure/login
 
-name: Deploy to AKS
+name: Deploy to Connected Cluster
 
 on:
   workflow_dispatch:
 
 env:
-  AZURE_CONTAINER_REGISTRY: "kingoliverDemoAcr"
+  AZURE_CONTAINER_REGISTRY: "acrprivregistry"
   CONTAINER_NAME: "azure-voting-app"
-  RESOURCE_GROUP: "kingoliver-demo"
-  CLUSTER_NAME: "kingoliver-demo-cluster"
+  RESOURCE_GROUP: "k8sArcPriv-RG"
+  CLUSTER_NAME: "k8sArcPriv-cluster"
   IMAGE_PULL_SECRET_NAME: "image-pull-secret-name"
 
 jobs:
@@ -52,11 +50,9 @@ jobs:
 
       # Logs in with your Azure credentials
       - name: Azure login
-        uses: azure/login@v1.4.3
+        uses: azure/login@v1
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       # Builds and pushes an image up to your Azure Container Registry
       - name: Build and push image to ACR
@@ -65,10 +61,13 @@ jobs:
 
       # Retrieves your Azure Kubernetes Service cluster's kubeconfig file
       - name: Get K8s context
-        uses: azure/aks-set-context@v2.0
+        uses: azure/k8s-set-context@v2
         with:
-          resource-group: ${{ env.RESOURCE_GROUP }}
+          method: service-principal
+          cluster-type: arc
           cluster-name: ${{ env.CLUSTER_NAME }}
+          resource-group: ${{ env.RESOURCE_GROUP }}
+          
 
       # Retrieves the credentials for pulling images from your Azure Container Registry
       - name: Get ACR credentials
