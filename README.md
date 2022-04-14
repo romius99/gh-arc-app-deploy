@@ -27,7 +27,7 @@ Below are the high level steps you can follow to implement and test the solution
 If you **do not** have a Azure Arc enabled Kubernetes cluster you can use **any one** of the below option to create one
 1. Follow this [jumpstart scenario](https://azurearcjumpstart.io/azure_arc_jumpstart/azure_arc_k8s/) on your favorite cloud or Kubernetes flavor in an automated fasion
 1. [This](https://docs.microsoft.com/en-us/azure/azure-arc/kubernetes/quickstart-connect-cluster?tabs=azure-cli) Microsoft document to create a kubernetes cluster and onboard it manually
-1. Manually create a Private cluster on Azure and onboard to Azure Arc. You can run these from your developer system with Azure CLI installed.
+1. Manually create a Private cluster on Azure and onboard to Azure Arc. **Ensure you follow the steps in the order and also read the inline comments**. You can run these from your developer system with Azure CLI installed.
     ```bash
     # Login to your subscription and ensure you are in the correct subscription
     az login
@@ -77,9 +77,22 @@ If you **do not** have a Azure Arc enabled Kubernetes cluster you can use **any 
     
     # Onboard your cluster to Azure Arc and verify you are able to see all pods running and you are able to see the resources on Azure Portal.
     az connectedk8s connect -g $ARC_RG_NAME -n $ARC_CLUSTER_NAME -l $LOCATION
-    kubectl get pods -n azure-arc
-    ARM_ID_CLUSTER=$(az connectedk8s show -n $ARC_CLUSTER_NAME -g $ARC_RG_NAME --query id -o tsv)
     ```
+After a few mins you should be able to see the new resource created on Azure portal.
+
+![Onboarded kubernetes cluster on Azure portal](/media/arcCluster.png)
+
+In the same session run the below commands to check the pods running in the cluster for Arc.
+
+```bash
+    kubectl get pods -n azure-arc
+    
+    ARM_ID_CLUSTER=$(az connectedk8s show -n $ARC_CLUSTER_NAME -g $ARC_RG_NAME --query id -o tsv)
+```
+
+![Arc Pods list from bastion host](/media/arcpods.png)
+
+In the same session run the below commands to check the pods running in the cluster for Azure Arc.
 
 ### Enable 'cluster connect' and assign rights to the service principal for Kubernetes RBAC
 Run the below command in the same session from the within your bastion host.
@@ -92,23 +105,42 @@ $AAD_ENTITY_OBJECT_ID= $(az ad sp show --id <appid_of_your_service_principal> --
 kubectl create clusterrolebinding admin-user-binding --clusterrole cluster-admin --user=$AAD_ENTITY_OBJECT_ID
 ```
 
-Now your cluster is ready to accept external query in a secure fashion using the Azure-Arc, Cluster connect and RBAC implementation of the service principal
+Now your cluster is ready to accept external query in a secure fashion using the Azure-Arc, Cluster connect and RBAC implementation of the service principal. You can test by logging in using the service principal credentials in your terminal and using **"connectedk8s proxy"** command.
 
-You can test by logging in using the service principal credentials in your terminal and using **connectedk8s proxy** command.
+**These commands should be run from the development system (outside the cluster network)**.
 
 ```bash
+$AzCred = Get-Credential -UserName <appid_of_your_service_principal>
+
+az login --service-principal -u $AzCred.UserName -p $AzCred.GetNetworkCredential().Password --tenant <YOUR_TENANT_ID>
+
 az connectedk8s proxy -n $ARC_CLUSTER_NAME -g $ARC_RG_NAME
 
-kubectl get pods -n default
+```
+
+The **connectedk8s proxy** implementation creates the necessary *kubeconfig* file on the system outside the network as well. You will find the new kubeconfig file in the 'C:\users\User_Name\ .kube\' folder. Note the server endpoint pointing to the loopback IP of 127.0.0.1 proxy endpoint.
+
+![Arc kubeconfig file ](/media/arckubeconfig.png)
+
+Run the below command to test the output.
+
+```bash
+kubectl get pods -n kube-system
+
 ```
 ### Create and configure your 'GitHub action'
 You can now use your github repo and github action to deploy an application into the cluster without having to run a self-hosted agent inside the network perimeter. To test this functionality, we have a sample code and a github action here in [this repo](https://github.com/Bapic/gh-arc-app-deploy). This repo contains a sample application called 'azure-vote-app', and its source code. The application contains a front end python app and a redis cache as temporary data store. The **.github/workflows** folder contains the github action that you will use to deploy this application to the cluster. If you are using a cloud cloud managed Kubernetes cluster, you should be able to use the Kubernetes service type as "LoadBalancer" and access the application over the internet. Let's get started.
 
-- Fork the repo to your github account and clone it to your developer system
+- Fork the repo to your github account and clone it to your developer system using ```git clone https://github.com/Bapic/gh-arc-app-deploy``` command.
 - Edit the **.github/workflow/github-action-arc-app-deploy.yaml** file and make necessary variable changes with your values.
+![Github action file variable update](/media/yamlvariableupdate.png)
+
 - Edit the **/manifest/azure-vote-frontend-deployment.yaml** file and update <Your_ACR_NAME> in line no. 17
+![Azure-vote-front manifest file ](/media/manifestfile.png)
+
 - Push the changes to your Github repo from your local system. Ensure that changes have taken effect in your repo.
 - Open your repo using web browser and go to **Actions** tab. You should see the "Deploy to Connected Cluster" workflow.
+![Github Action workflow update ](/media/actionworkflow.png)
 
 ### Run Github action and test the solution
 Last step before you run the workflow is to set up a GitHub Secret. Using *Settings* tab in your Github portal, create a new Secret with name - **AZURE_CREDENTIALS**. The values should include the details of your Service Principal that you had notes earlier. it will look something like this.
@@ -127,26 +159,34 @@ Last step before you run the workflow is to set up a GitHub Secret. Using *Setti
   "managementEndpointUrl": "https://management.core.windows.net/"
 }
 ```
+![Create github secret ](/media/githubsecret.png)
 
-Now your github action is all set to run against the connected Kubernetes cluster. 
+Now your github action is all set to run against the connected Kubernetes cluster.
 - Using the web browser in your github repo - click on the **Run workflow** to trigger the workflow.
+![Arc kubeconfig file ](/media/runworkflow.png)
 
 Once it starts, you should be able to see all the stages of Build of the source code, push to your ACR of the container image and deployment to your connected cluster. In a few mins your will have your cluster ready with the application running. It will deploy the application in the 'default' namespace.
+![Build and deploy using github Action ](/media/builddeploy.png)
+
 
 - Check the resources created in the cluster. Run this from within your bastion host session
 
 ```bash
-    kubectl get po
+kubectl get po
 ```
-
+![Deployed pods ](/media/deployedpods.png)
 If you are using a cloud load balancer, you should be able to see the services of the application are accessible over the internet using the Public IP of the load balancer. Collect the service IP (internal or public) using kubectl command from the basion host.
 
 ```bash
 kubectl get svc
 ```
+Here is an example of **EXTERNAL IP** exposed over the internet
+![service IP ](/media/svcip.png)
+
 - Access your application by using the IP address in your browser.
+![Access application ](/media/accessapp.png)
 ### Cleanup the environment
-If you want to clean up the entire environment, just delete the resource groups created.
+If you want to clean up the entire environment, just delete the resource groups created so far.
 
 ### Summary
 You have now successfully deployed an application using Azure Arc enabled Kubernetes cluster and GitHub action. For production environments additional security and configurations etc. are recommended. There is one more alternative that you can use in such closed environments - GitOps. All these and much more we will explore in upcoming post. Hope you found this post useful. Stay tuned for more.
