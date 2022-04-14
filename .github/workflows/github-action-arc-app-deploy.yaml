@@ -8,9 +8,9 @@
 #
 # To configure this workflow:
 #
-# 1. Set the following secrets in your repository (instructions for getting these
+# 1. Set the following secrets in your repository
 #    - AZURE_CREDENTIALS
-#    -
+#    
 #
 # 2. Set the following environment variables (or replace the values below):
 #    - AZURE_CONTAINER_REGISTRY (name of your container registry / ACR)
@@ -30,10 +30,10 @@ on:
   workflow_dispatch:
 
 env:
-  AZURE_CONTAINER_REGISTRY: "acrprivregistry"
+  AZURE_CONTAINER_REGISTRY: "<Your_ACR_NAME>"
   CONTAINER_NAME: "azure-voting-app"
-  RESOURCE_GROUP: "k8sArcPriv-RG"
-  CLUSTER_NAME: "k8sArcPriv-cluster"
+  RESOURCE_GROUP: "<Your_ARC_RG_NAME>"
+  CLUSTER_NAME: "<Your_ARC_CLUSTER_NAME>"
   IMAGE_PULL_SECRET_NAME: "image-pull-secret-name"
 
 jobs:

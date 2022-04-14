@@ -33,8 +33,9 @@ If you **do not** have a Azure Arc enabled Kubernetes cluster you can use **any 
     az login
     az account set -s "<subscription_name>"
     
-    # create a Service Principal for your subscription to be used in this exercise
-    az ad sp create-for-rbac --name "<your_SP_name>" --role contributor --scopes /subscriptions/<subscription_id>/resourceGroups/<your_rg_name> --sdk-auth
+    # Create a Service Principal for your subscription to be used in this exercise. You can scope this to your resource groups as well. This must also include your ARC (connected cluster and ACR) resource group that you will create later. So, you can skip this step for now and do it later once you create the RG for your ARC cluster resource. You can also leave this at the subscription level for your test and create it here.
+
+    az ad sp create-for-rbac --name "<your_SP_name>" --role contributor --scopes /subscriptions/<subscription_id> --sdk-auth
     # Note the JSON Output after you run the command with the AppID, Secret, Tenant ID and Subscription ID
     
     # Enable necessary resource providers and extensions
@@ -78,44 +79,74 @@ If you **do not** have a Azure Arc enabled Kubernetes cluster you can use **any 
     az connectedk8s connect -g $ARC_RG_NAME -n $ARC_CLUSTER_NAME -l $LOCATION
     kubectl get pods -n azure-arc
     ARM_ID_CLUSTER=$(az connectedk8s show -n $ARC_CLUSTER_NAME -g $ARC_RG_NAME --query id -o tsv)
- 
     ```
-### Enable 'cluster connect' and assign rights to the service principal for Kubernetes RBAC
-Enable Cluster Connect on the Arc-enabled cluster. Run the below command from the within your bastion host system from within the same session.
-    
-    ```bash
-    az connectedk8s enable-features --features cluster-connect -n $ARC_CLUSTER_NAME -g $ARC_RG_NAME
-    $AAD_ENTITY_OBJECT_ID= $(az ad sp show --id <appid_of_your_service_principal> --query objectId -o tsv)
-    kubectl create clusterrolebinding admin-user-binding --clusterrole cluster-admin --user=$AAD_ENTITY_OBJECT_ID
-    ```
-Now your cluster is ready to accept external query in a secure fashion using the Azure-Arc, Cluster connect and RBAC implementation of the service principal
-### Create and configure your 'GitHub action'
 
+### Enable 'cluster connect' and assign rights to the service principal for Kubernetes RBAC
+Run the below command in the same session from the within your bastion host.
+
+```bash
+az connectedk8s enable-features --features cluster-connect -n $ARC_CLUSTER_NAME -g $ARC_RG_NAME
+
+$AAD_ENTITY_OBJECT_ID= $(az ad sp show --id <appid_of_your_service_principal> --query objectId -o tsv)
+
+kubectl create clusterrolebinding admin-user-binding --clusterrole cluster-admin --user=$AAD_ENTITY_OBJECT_ID
+```
+
+Now your cluster is ready to accept external query in a secure fashion using the Azure-Arc, Cluster connect and RBAC implementation of the service principal
+
+You can test by logging in using the service principal credentials in your terminal and using **connectedk8s proxy** command.
+
+```bash
+az connectedk8s proxy -n $ARC_CLUSTER_NAME -g $ARC_RG_NAME
+
+kubectl get pods -n default
+```
+### Create and configure your 'GitHub action'
+You can now use your github repo and github action to deploy an application into the cluster without having to run a self-hosted agent inside the network perimeter. To test this functionality, we have a sample code and a github action here in [this repo](https://github.com/Bapic/gh-arc-app-deploy). This repo contains a sample application called 'azure-vote-app', and its source code. The application contains a front end python app and a redis cache as temporary data store. The **.github/workflows** folder contains the github action that you will use to deploy this application to the cluster. If you are using a cloud cloud managed Kubernetes cluster, you should be able to use the Kubernetes service type as "LoadBalancer" and access the application over the internet. Let's get started.
+
+- Fork the repo to your github account and clone it to your developer system
+- Edit the **.github/workflow/github-action-arc-app-deploy.yaml** file and make necessary variable changes with your values.
+- Edit the **/manifest/azure-vote-frontend-deployment.yaml** file and update <Your_ACR_NAME> in line no. 17
+- Push the changes to your Github repo from your local system. Ensure that changes have taken effect in your repo.
+- Open your repo using web browser and go to **Actions** tab. You should see the "Deploy to Connected Cluster" workflow.
 
 ### Run Github action and test the solution
+Last step before you run the workflow is to set up a GitHub Secret. Using *Settings* tab in your Github portal, create a new Secret with name - **AZURE_CREDENTIALS**. The values should include the details of your Service Principal that you had notes earlier. it will look something like this.
 
+```bash
+{
+  "clientId": "<YOUR_SP_APP_ID>",
+  "clientSecret": "<YOUR_SP_PASSWORD>",
+  "subscriptionId": "<YOUR_SUBSCRIPTION_ID>",
+  "tenantId": "<YOUR_TENANT_ID>",
+  "activeDirectoryEndpointUrl": "https://login.microsoftonline.com",
+  "resourceManagerEndpointUrl": "https://management.azure.com/",
+  "activeDirectoryGraphResourceId": "https://graph.windows.net/",
+  "sqlManagementEndpointUrl": "https://management.core.windows.net:8443/",
+  "galleryEndpointUrl": "https://gallery.azure.com/",
+  "managementEndpointUrl": "https://management.core.windows.net/"
+}
+```
+
+Now your github action is all set to run against the connected Kubernetes cluster. 
+- Using the web browser in your github repo - click on the **Run workflow** to trigger the workflow.
+
+Once it starts, you should be able to see all the stages of Build of the source code, push to your ACR of the container image and deployment to your connected cluster. In a few mins your will have your cluster ready with the application running. It will deploy the application in the 'default' namespace.
+
+- Check the resources created in the cluster. Run this from within your bastion host session
+
+```bash
+    kubectl get po
+```
+
+If you are using a cloud load balancer, you should be able to see the services of the application are accessible over the internet using the Public IP of the load balancer. Collect the service IP (internal or public) using kubectl command from the basion host.
+
+```bash
+kubectl get svc
+```
+- Access your application by using the IP address in your browser.
 ### Cleanup the environment
-
+If you want to clean up the entire environment, just delete the resource groups created.
 
 ### Summary
-
-
-
-
-
-
-
-
-## Contributing
-
-This project welcomes contributions and suggestions. Most contributions require you to agree to a
-Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
-the rights to use your contribution. For details, visit https://cla.microsoft.com.
-
-When you submit a pull request, a CLA-bot will automatically determine whether you need to provide
-a CLA and decorate the PR appropriately (e.g., label, comment). Simply follow the instructions
-provided by the bot. You will only need to do this once across all repos using our CLA.
-
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
-contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+You have now successfully deployed an application using Azure Arc enabled Kubernetes cluster and GitHub action. For production environments additional security and configurations etc. are recommended. There is one more alternative that you can use in such closed environments - GitOps. All these and much more we will explore in upcoming post. Hope you found this post useful. Stay tuned for more.
