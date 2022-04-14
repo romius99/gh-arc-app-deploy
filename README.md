@@ -140,7 +140,7 @@ You can now use your github repo and github action to deploy an application into
 
 - Push the changes to your Github repo from your local system. Ensure that changes have taken effect in your repo.
 - Open your repo using web browser and go to **Actions** tab. You should see the "Deploy to Connected Cluster" workflow.
-![Github Action workflow update ](/media/actionworkflow.png)
+![Github Action workflow update ](/media/actionWorkflow.png)
 
 ### Run Github action and test the solution
 Last step before you run the workflow is to set up a GitHub Secret. Using *Settings* tab in your Github portal, create a new Secret with name - **AZURE_CREDENTIALS**. The values should include the details of your Service Principal that you had notes earlier. it will look something like this.
