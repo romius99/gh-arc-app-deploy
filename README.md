@@ -163,7 +163,7 @@ Last step before you run the workflow is to set up a GitHub Secret. Using *Setti
 
 Now your github action is all set to run against the connected Kubernetes cluster.
 - Using the web browser in your github repo - click on the **Run workflow** to trigger the workflow.
-![Arc kubeconfig file ](/media/runworkflow.png)
+![Run workflow](/media/runWorkflow.png)
 
 Once it starts, you should be able to see all the stages of Build of the source code, push to your ACR of the container image and deployment to your connected cluster. In a few mins your will have your cluster ready with the application running. It will deploy the application in the 'default' namespace.
 ![Build and deploy using github Action ](/media/builddeploy.png)
