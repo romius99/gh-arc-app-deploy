@@ -12,7 +12,7 @@ In this exercise we will learn how to use **cluster connect** and **GitHub actio
 
 *Disclaimer: The steps mentioned below are for non-production, test or experimental learning scenarios only. It will help you to understand and take an informed decision on its usage. Once confident, you can create a more robust production ready solution.*
 
-[IMAGE GOES HERE]
+![K8s Arc and GitHub Action solution](/media/githubaction-k8sarc-soln.png) 
 ------
 ## Implementation steps
 Below are the high level steps you can follow to implement and test the solution. before you get started, understand what you need as prerequisite.
