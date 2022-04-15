@@ -46,9 +46,9 @@ If you **do not** have a Azure Arc enabled Kubernetes cluster you can use **any 
     az extension add --upgrade --yes --name k8s-extension
 
     # Create a Private AKS cluster and test the functionality. Replace the location and resource group, cluster name with as per your choice.
-    location='your_location'
-    rgname='your_rg_name'
-    privclustername='your_private_cluster_name'
+    $location='your_location'
+    $rgname='your_rg_name'
+    $privclustername='your_private_cluster_name'
     
     az group create -l $location -n $rgname
 
@@ -65,11 +65,11 @@ If you **do not** have a Azure Arc enabled Kubernetes cluster you can use **any 
     kubectl get deployments --all-namespaces=true
     
     # Create necessary variables, resource groups, Azure container registry before onboarding your cluster to Azure Arc. Feel free to change the values below to more appropriate ones as you may think fit.
-    K8S_ARC_PREFIX="k8sArcPriv"
-    ARC_RG_NAME="${K8S_ARC_PREFIX}-RG"
-    ARC_CLUSTER_NAME="${K8S_ARC_PREFIX}-cluster"
-    LOCATION="eastus"
-    ACR_NAME='your_acr_name'
+    $K8S_ARC_PREFIX="k8sArcPriv"
+    $ARC_RG_NAME="${K8S_ARC_PREFIX}-RG"
+    $ARC_CLUSTER_NAME="${K8S_ARC_PREFIX}-cluster"
+    $LOCATION="eastus"
+    $ACR_NAME='your_acr_name'
     
     az group create -n $ARC_RG_NAME -l $LOCATION
     az acr create --resource-group $ARC_RG_NAME --name $ACR_NAME --sku Basic
@@ -87,7 +87,7 @@ In the same session run the below commands to check the pods running in the clus
 ```bash
     kubectl get pods -n azure-arc
     
-    ARM_ID_CLUSTER=$(az connectedk8s show -n $ARC_CLUSTER_NAME -g $ARC_RG_NAME --query id -o tsv)
+    $ARM_ID_CLUSTER=$(az connectedk8s show -n $ARC_CLUSTER_NAME -g $ARC_RG_NAME --query id -o tsv)
 ```
 
 ![Arc Pods list from bastion host](/media/arcpods.png)
@@ -168,7 +168,6 @@ Now your github action is all set to run against the connected Kubernetes cluste
 Once it starts, you should be able to see all the stages of Build of the source code, push to your ACR of the container image and deployment to your connected cluster. In a few mins your will have your cluster ready with the application running. It will deploy the application in the 'default' namespace.
 ![Build and deploy using github Action ](/media/builddeploy.png)
 
-
 - Check the resources created in the cluster. Run this from within your bastion host session
 
 ```bash
@@ -189,4 +188,4 @@ Here is an example of **EXTERNAL IP** exposed over the internet
 If you want to clean up the entire environment, just delete the resource groups created so far.
 
 ### Summary
-You have now successfully deployed an application using Azure Arc enabled Kubernetes cluster and GitHub action. For production environments additional security and configurations etc. are recommended. There is one more alternative that you can use in such closed environments - GitOps. All these and much more we will explore in upcoming post. Hope you found this post useful. Stay tuned for more.
+You have now successfully deployed an application using Azure Arc enabled Kubernetes, Cluster Connect and GitHub action. For production environments additional security and configurations etc. will be required. There is one more alternative that you can use in such closed environments - GitOps. All these and much more we will explore in upcoming post. Hope you found this post useful. Stay tuned for more.
