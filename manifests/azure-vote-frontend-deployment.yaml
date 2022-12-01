@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: azure-vote-front
-          image: <Your_ACR_NAME>.azurecr.io/azure-voting-app
+          image: AzureArcPocCr.azurecr.io/azure-voting-app
           ports:
             - containerPort: 80
           env:
