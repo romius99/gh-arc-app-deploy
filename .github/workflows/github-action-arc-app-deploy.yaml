@@ -30,10 +30,10 @@ on:
   workflow_dispatch:
 
 env:
-  AZURE_CONTAINER_REGISTRY: "<Your_ACR_NAME>"
+  AZURE_CONTAINER_REGISTRY: "AzureArcPocCr"
   CONTAINER_NAME: "azure-voting-app"
-  RESOURCE_GROUP: "<Your_ARC_RG_NAME>"
-  CLUSTER_NAME: "<Your_ARC_CLUSTER_NAME>"
+  RESOURCE_GROUP: "azure-arc=poc-rg"
+  CLUSTER_NAME: "azure-arc-k8s-cluster"
   IMAGE_PULL_SECRET_NAME: "image-pull-secret-name"
 
 jobs:
